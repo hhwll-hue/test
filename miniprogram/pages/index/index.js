@@ -8,7 +8,21 @@ Page({
   },
 
   onLoad() {
+    this.testHealth();
     this.loadFanTypes();
+  },
+
+  testHealth() {
+    wx.request({
+      url: `${API_BASE_URL}/api/health`,
+      method: 'GET',
+      success: (res) => {
+        console.log('health success:', res.data);
+      },
+      fail: (err) => {
+        console.error('health fail:', err);
+      }
+    });
   },
 
   loadFanTypes() {
@@ -18,15 +32,15 @@ Page({
     });
 
     wx.request({
-      url: `${API_BASE_URL + '/https://fan-240142-10-1417324185.sh.run.tcloudbase.com'}/api/fan-types`,
+      url: `${API_BASE_URL}/api/fan-types`,
       method: 'GET',
       success: (res) => {
         const { data } = res;
 
-        if (res.statusCode !== 200 || !data.success) {
+        if (res.statusCode !== 200 || !data || !data.success) {
           this.setData({
             loading: false,
-            error: data.message || '接口请求失败'
+            error: (data && data.message) || '接口请求失败'
           });
           return;
         }
@@ -36,7 +50,8 @@ Page({
           list: data.data || []
         });
       },
-      fail: () => {
+      fail: (err) => {
+        console.error('fan-types fail:', err);
         this.setData({
           loading: false,
           error: '无法连接后端接口，请检查服务地址和端口'
