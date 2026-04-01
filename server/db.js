@@ -1,26 +1,22 @@
 const mysql = require('mysql2/promise');
 
-function parseMysqlAddress(address) {
-  if (!address) {
-    throw new Error('MYSQL_ADDRESS is not set');
-  }
+const DB_HOST = process.env.DB_HOST;
+const DB_PORT = Number(process.env.DB_PORT || 3306);
+const DB_NAME = process.env.DB_NAME;
+const DB_USER = process.env.DB_USER;
+const DB_PASSWORD = process.env.DB_PASSWORD;
 
-  const [host, port] = address.split(':');
-
-  return {
-    host,
-    port: Number(port || 3306)
-  };
-}
-
-const { host, port } = parseMysqlAddress(process.env.MYSQL_ADDRESS);
+if (!DB_HOST) throw new Error('DB_HOST is not set');
+if (!DB_NAME) throw new Error('DB_NAME is not set');
+if (!DB_USER) throw new Error('DB_USER is not set');
+if (!DB_PASSWORD) throw new Error('DB_PASSWORD is not set');
 
 const pool = mysql.createPool({
-  host,
-  port,
-  user: process.env.MYSQL_USERNAME,
-  password: process.env.MYSQL_PASSWORD,
-  database: process.env.MYSQL_DATABASE,
+  host: DB_HOST,
+  port: DB_PORT,
+  user: DB_USER,
+  password: DB_PASSWORD,
+  database: DB_NAME,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
