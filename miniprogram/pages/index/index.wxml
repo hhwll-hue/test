@@ -1,0 +1,18 @@
+<view class="page">
+  <view class="header">
+    <view class="title">fan_type 测试列表</view>
+    <view class="subtitle">小程序启动后直接请求后端接口，不需要登录</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="status-card">数据加载中...</view>
+
+  <view wx:elif="{{error}}" class="status-card error">{{error}}</view>
+
+  <view wx:elif="{{list.length === 0}}" class="status-card">数据库中暂无数据</view>
+
+  <view wx:else class="list">
+    <view wx:for="{{list}}" wx:key="id" class="item">
+      <text class="fan-type">{{item.fan_type || '未填写 fan_type'}}</text>
+    </view>
+  </view>
+</view>

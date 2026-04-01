@@ -1,0 +1,19 @@
+{
+  "description": "SQL connection test mini program",
+  "packOptions": {
+    "ignore": []
+  },
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true
+  },
+  "compileType": "miniprogram",
+  "libVersion": "3.6.1",
+  "appid": "touristappid",
+  "projectname": "sql-test-miniapp",
+  "simulatorType": "wechat",
+  "condition": {}
+}
