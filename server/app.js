@@ -1,9 +1,10 @@
 const express = require('express');
 const cors = require('cors');
-const { getFanTypeList } = require('./db');
+const { SERVER_CONFIG } = require('./config');
+const { getProductGroups } = require('./db');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = SERVER_CONFIG.port || 3000;
 
 app.use(cors());
 app.use(express.json());
@@ -15,9 +16,9 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-app.get('/api/fan-types', async (req, res) => {
+app.get('/api/products', async (req, res) => {
   try {
-    const data = await getFanTypeList();
+    const data = await getProductGroups();
     res.json({
       success: true,
       data

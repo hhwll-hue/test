@@ -4,12 +4,14 @@ Page({
   data: {
     loading: true,
     error: '',
-    list: []
+    groups: [],
+    totalProducts: 0,
+    totalGroups: 0
   },
 
   onLoad() {
     this.testHealth();
-    this.loadFanTypes();
+    this.loadProducts();
   },
 
   testHealth() {
@@ -25,14 +27,14 @@ Page({
     });
   },
 
-  loadFanTypes() {
+  loadProducts() {
     this.setData({
       loading: true,
       error: ''
     });
 
     wx.request({
-      url: `${API_BASE_URL}/api/fan-types`,
+      url: `${API_BASE_URL}/api/products`,
       method: 'GET',
       success: (res) => {
         const { data } = res;
@@ -45,13 +47,17 @@ Page({
           return;
         }
 
+        const payload = data.data || {};
+
         this.setData({
           loading: false,
-          list: data.data || []
+          groups: payload.groups || [],
+          totalProducts: payload.totalProducts || 0,
+          totalGroups: payload.totalGroups || 0
         });
       },
       fail: (err) => {
-        console.error('fan-types fail:', err);
+        console.error('products fail:', err);
         this.setData({
           loading: false,
           error: '无法连接后端接口，请检查服务地址和端口'

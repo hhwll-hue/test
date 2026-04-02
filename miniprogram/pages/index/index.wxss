@@ -1,5 +1,7 @@
 .page {
+  min-height: 100vh;
   padding: 32rpx 24rpx 48rpx;
+  background: linear-gradient(180deg, #eef6ff 0%, #f8fafc 48%, #ffffff 100%);
 }
 
 .header {
@@ -18,12 +20,18 @@
   color: #6b7280;
 }
 
+.summary {
+  margin-top: 16rpx;
+  font-size: 24rpx;
+  color: #2563eb;
+}
+
 .status-card,
-.item {
+.group-card {
   background: #ffffff;
   border-radius: 20rpx;
   padding: 24rpx;
-  box-shadow: 0 8rpx 24rpx rgba(15, 23, 42, 0.06);
+  box-shadow: 0 10rpx 30rpx rgba(15, 23, 42, 0.07);
 }
 
 .status-card {
@@ -37,10 +45,84 @@
 .list {
   display: flex;
   flex-direction: column;
+  gap: 24rpx;
+}
+
+.group-card {
+  overflow: hidden;
+}
+
+.product-image {
+  width: 100%;
+  height: 360rpx;
+  border-radius: 16rpx;
+  background: #e5e7eb;
+}
+
+.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 28rpx;
+}
+
+.group-header {
+  margin-top: 20rpx;
+}
+
+.group-title {
+  display: inline-block;
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 22rpx;
+  font-weight: 600;
+}
+
+.group-url {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+  color: #64748b;
+  word-break: break-all;
+}
+
+.product-list {
+  margin-top: 20rpx;
+  display: flex;
+  flex-direction: column;
   gap: 16rpx;
 }
 
+.product-item {
+  padding: 20rpx;
+  border-radius: 16rpx;
+  background: #f8fafc;
+}
+
+.product-name,
 .fan-type {
+  display: block;
+}
+
+.product-name {
   font-size: 30rpx;
+  font-weight: 600;
   color: #111827;
+}
+
+.fan-type {
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  color: #334155;
+}
+
+.product-meta {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: #64748b;
 }

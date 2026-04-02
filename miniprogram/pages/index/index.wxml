@@ -1,18 +1,43 @@
 <view class="page">
   <view class="header">
-    <view class="title">fan_type 测试列表</view>
-    <view class="subtitle">小程序启动后直接请求后端接口，不需要登录</view>
+    <view class="title">product_master 测试页</view>
+    <view class="subtitle">小程序启动后免登录直接读取数据库内容，并按相同 image_url 合并显示图片</view>
+    <view class="summary" wx:if="{{!loading && !error}}">
+      共 {{totalProducts}} 条记录，渲染 {{totalGroups}} 张图片分组
+    </view>
   </view>
 
   <view wx:if="{{loading}}" class="status-card">数据加载中...</view>
 
   <view wx:elif="{{error}}" class="status-card error">{{error}}</view>
 
-  <view wx:elif="{{list.length === 0}}" class="status-card">数据库中暂无数据</view>
+  <view wx:elif="{{groups.length === 0}}" class="status-card">数据库中暂无数据</view>
 
   <view wx:else class="list">
-    <view wx:for="{{list}}" wx:key="id" class="item">
-      <text class="fan-type">{{item.fan_type || '未填写 fan_type'}}</text>
+    <view wx:for="{{groups}}" wx:for-item="group" wx:key="groupKey" class="group-card">
+      <image
+        wx:if="{{group.imageUrl}}"
+        class="product-image"
+        src="{{group.imageUrl}}"
+        mode="aspectFill"
+        show-menu-by-longpress
+      />
+      <view wx:else class="product-image placeholder">无图片</view>
+
+      <view class="group-header">
+        <text class="group-title">
+          {{group.sharedImage ? '同图分组' : '单条图片'}}
+        </text>
+        <text class="group-url">{{group.imageUrl || '当前记录未配置 image_url'}}</text>
+      </view>
+
+      <view class="product-list">
+        <view wx:for="{{group.products}}" wx:for-item="product" wx:key="id" class="product-item">
+          <text class="product-name">{{product.product_name || '未填写 product_name'}}</text>
+          <text class="fan-type">fan_type：{{product.fan_type || '未填写 fan_type'}}</text>
+          <text class="product-meta">ID：{{product.id}}　SKU：{{product.sku_code || '-'}}</text>
+        </view>
+      </view>
     </view>
   </view>
 </view>
