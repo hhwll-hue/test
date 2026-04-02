@@ -1,9 +1,9 @@
-# 微信小程序 product_master 测试示例
+# 微信小程序工业风机价格录入示例
 
 ## 目录
 
-- `server`: Node.js 后端接口，负责连接 MySQL 并读取 `product_master`
-- `miniprogram`: 微信小程序测试页，启动后免登录直接展示图片、`product_name`、`fan_type`
+- `server`: Node.js 后端接口，负责连接 MySQL，读取 `product_master` 并写入 `price_history`
+- `miniprogram`: 微信小程序页面，展示产品图片和基础参数，并支持录入采购价格
 
 ## 启动后端
 
@@ -23,12 +23,14 @@
 
 - `GET /api/health`
 - `GET /api/products`
+- `POST /api/products/:id/price`
 
 ## 当前页面行为
 
 - 启动小程序后不需要登录，页面会自动请求 `/api/products`
-- 每条记录读取 `product_name`、`fan_type`、`image_url`
-- 如果多个 `id` 对应同一个 `image_url`，页面只显示一张图片，并把这些产品放在同一个分组下面
+- 页面只展示 `product_master` 中的 `product_name`、`model`、`voltage`、`power` 和 `image_url`
+- 页面会读取 `price_history` 中每个产品最新一条 `purchase_price` 作为当前价格展示
+- 输入价格并保存后，后端会往 `price_history` 插入一条新记录，`price_time` 使用接口写入时的当前时间
 
 ## 你需要修改的文件
 

@@ -1,9 +1,8 @@
 <view class="page">
   <view class="header">
-    <view class="title">product_master 测试页</view>
-    <view class="subtitle">小程序启动后免登录直接读取数据库内容，并按相同 image_url 合并显示图片</view>
+    <view class="title">工业风机价格录入</view>
     <view class="summary" wx:if="{{!loading && !error}}">
-      共 {{totalProducts}} 条记录，渲染 {{totalGroups}} 张图片分组
+      当前共 {{totalProducts}} 个产品
     </view>
   </view>
 
@@ -11,32 +10,62 @@
 
   <view wx:elif="{{error}}" class="status-card error">{{error}}</view>
 
-  <view wx:elif="{{groups.length === 0}}" class="status-card">数据库中暂无数据</view>
+  <view wx:elif="{{products.length === 0}}" class="status-card">数据库中暂无数据</view>
 
   <view wx:else class="list">
-    <view wx:for="{{groups}}" wx:for-item="group" wx:key="groupKey" class="group-card">
+    <view wx:for="{{products}}" wx:for-item="product" wx:for-index="index" wx:key="id" class="product-card">
       <image
-        wx:if="{{group.imageUrl}}"
+        wx:if="{{product.image_url}}"
         class="product-image"
-        src="{{group.imageUrl}}"
+        src="{{product.image_url}}"
         mode="aspectFill"
         show-menu-by-longpress
       />
-      <view wx:else class="product-image placeholder">无图片</view>
+      <view wx:else class="product-image placeholder">暂无图片</view>
 
-      <view class="group-header">
-        <text class="group-title">
-          {{group.sharedImage ? '同图分组' : '单条图片'}}
-        </text>
-        <text class="group-url">{{group.imageUrl || '当前记录未配置 image_url'}}</text>
+      <view class="product-body">
+        <view class="field-row">
+          <text class="field-label">产品名称</text>
+          <text class="field-value">{{product.product_name || '-'}}</text>
+        </view>
+        <view class="field-row">
+          <text class="field-label">型号</text>
+          <text class="field-value">{{product.model || '-'}}</text>
+        </view>
+        <view class="field-row">
+          <text class="field-label">电压</text>
+          <text class="field-value">{{product.voltage || '-'}}</text>
+        </view>
+        <view class="field-row">
+          <text class="field-label">功率</text>
+          <text class="field-value">{{product.power || '-'}}</text>
+        </view>
+        <view class="field-row price-row">
+          <text class="field-label">当前价格</text>
+          <text class="price-value">{{product.purchase_price || '未录入'}}</text>
+        </view>
+        <view wx:if="{{product.price_time}}" class="price-time">{{product.price_time}}</view>
       </view>
 
-      <view class="product-list">
-        <view wx:for="{{group.products}}" wx:for-item="product" wx:key="id" class="product-item">
-          <text class="product-name">{{product.product_name || '未填写 product_name'}}</text>
-          <text class="fan-type">fan_type：{{product.fan_type || '未填写 fan_type'}}</text>
-          <text class="product-meta">ID：{{product.id}}　SKU：{{product.sku_code || '-'}}</text>
-        </view>
+      <view class="price-editor">
+        <input
+          class="price-input"
+          type="digit"
+          placeholder="输入采购价格"
+          value="{{product.draftPrice}}"
+          data-index="{{index}}"
+          bindinput="onPriceInput"
+        />
+        <button
+          class="save-button"
+          size="mini"
+          loading="{{savingProductId === product.id}}"
+          disabled="{{savingProductId === product.id}}"
+          data-index="{{index}}"
+          bindtap="submitPrice"
+        >
+          保存价格
+        </button>
       </view>
     </view>
   </view>

@@ -1,45 +1,56 @@
 .page {
+  --bg-panel: #1a2229;
+  --bg-panel-soft: #232f38;
+  --line: rgba(255, 255, 255, 0.08);
+  --text-main: #f3f4f6;
+  --text-muted: #9ca3af;
+  --accent: #f97316;
+  --accent-strong: #fb923c;
+  --success: #22c55e;
   min-height: 100vh;
-  padding: 32rpx 24rpx 48rpx;
-  background: linear-gradient(180deg, #eef6ff 0%, #f8fafc 48%, #ffffff 100%);
+  padding: 32rpx 24rpx 56rpx;
+  background:
+    radial-gradient(circle at top right, rgba(249, 115, 22, 0.24), transparent 30%),
+    linear-gradient(180deg, #0f1418 0%, #141c22 48%, #0e1216 100%);
 }
 
 .header {
-  margin-bottom: 24rpx;
+  margin-bottom: 28rpx;
+  padding: 28rpx;
+  border: 1rpx solid var(--line);
+  border-radius: 24rpx;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  box-shadow: 0 18rpx 40rpx rgba(0, 0, 0, 0.25);
 }
 
 .title {
-  font-size: 40rpx;
-  font-weight: 600;
-  color: #111827;
-}
-
-.subtitle {
-  margin-top: 8rpx;
-  font-size: 24rpx;
-  color: #6b7280;
+  font-size: 42rpx;
+  font-weight: 700;
+  letter-spacing: 2rpx;
+  color: var(--text-main);
 }
 
 .summary {
   margin-top: 16rpx;
   font-size: 24rpx;
-  color: #2563eb;
+  color: var(--accent-strong);
 }
 
 .status-card,
-.group-card {
-  background: #ffffff;
-  border-radius: 20rpx;
-  padding: 24rpx;
-  box-shadow: 0 10rpx 30rpx rgba(15, 23, 42, 0.07);
+.product-card {
+  border: 1rpx solid var(--line);
+  border-radius: 24rpx;
+  background: linear-gradient(180deg, rgba(33, 42, 50, 0.98), rgba(21, 28, 34, 0.98));
+  box-shadow: 0 18rpx 44rpx rgba(0, 0, 0, 0.28);
 }
 
 .status-card {
-  color: #374151;
+  padding: 28rpx 24rpx;
+  color: var(--text-main);
 }
 
 .error {
-  color: #b91c1c;
+  color: #fca5a5;
 }
 
 .list {
@@ -48,81 +59,103 @@
   gap: 24rpx;
 }
 
-.group-card {
+.product-card {
   overflow: hidden;
 }
 
 .product-image {
   width: 100%;
-  height: 360rpx;
-  border-radius: 16rpx;
-  background: #e5e7eb;
+  height: 320rpx;
+  background: #2f3942;
 }
 
 .placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #94a3b8;
+  color: var(--text-muted);
   font-size: 28rpx;
 }
 
-.group-header {
-  margin-top: 20rpx;
+.product-body {
+  padding: 24rpx 24rpx 12rpx;
 }
 
-.group-title {
-  display: inline-block;
-  padding: 8rpx 16rpx;
-  border-radius: 999rpx;
-  background: #dbeafe;
-  color: #1d4ed8;
-  font-size: 22rpx;
-  font-weight: 600;
+.field-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20rpx;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid rgba(255, 255, 255, 0.06);
 }
 
-.group-url {
-  display: block;
-  margin-top: 12rpx;
-  font-size: 22rpx;
+.field-label {
+  min-width: 120rpx;
+  font-size: 24rpx;
+  color: var(--text-muted);
+  letter-spacing: 1rpx;
+}
+
+.field-value,
+.price-value {
+  flex: 1;
+  text-align: right;
+  font-size: 28rpx;
   line-height: 1.5;
-  color: #64748b;
+  color: var(--text-main);
   word-break: break-all;
 }
 
-.product-list {
-  margin-top: 20rpx;
-  display: flex;
-  flex-direction: column;
-  gap: 16rpx;
+.price-row {
+  border-bottom: none;
 }
 
-.product-item {
-  padding: 20rpx;
-  border-radius: 16rpx;
-  background: #f8fafc;
+.price-value {
+  color: var(--accent-strong);
+  font-size: 34rpx;
+  font-weight: 700;
 }
 
-.product-name,
-.fan-type {
-  display: block;
-}
-
-.product-name {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: #111827;
-}
-
-.fan-type {
-  margin-top: 8rpx;
-  font-size: 26rpx;
-  color: #334155;
-}
-
-.product-meta {
-  display: block;
-  margin-top: 10rpx;
+.price-time {
+  margin-top: 12rpx;
   font-size: 22rpx;
-  color: #64748b;
+  color: var(--success);
+  text-align: right;
+}
+
+.price-editor {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 12rpx 24rpx 24rpx;
+}
+
+.price-input {
+  flex: 1;
+  height: 84rpx;
+  padding: 0 24rpx;
+  border-radius: 16rpx;
+  background: var(--bg-panel-soft);
+  border: 1rpx solid rgba(249, 115, 22, 0.35);
+  color: var(--text-main);
+  font-size: 28rpx;
+}
+
+.save-button {
+  margin: 0;
+  min-width: 188rpx;
+  height: 84rpx;
+  line-height: 84rpx;
+  border: none;
+  border-radius: 16rpx;
+  padding: 0 28rpx;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+  color: #fff;
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.save-button::after {
+  border: none;
 }
