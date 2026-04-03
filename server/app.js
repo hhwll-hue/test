@@ -403,3 +403,24 @@ app.post('/api/products/:id/price', requireAuth, async (req, res) => {
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server started on port ${port}`);
 });
+module.exports = {
+  SERVER_CONFIG: {
+    port: Number(process.env.PORT || 3000),
+    nodeEnv: process.env.NODE_ENV || 'development'
+  },
+
+  DB_CONFIG: {
+    host: process.env.DB_HOST || '',
+    port: Number(process.env.DB_PORT || 3306),
+    database: process.env.DB_NAME || '',
+    user: process.env.DB_USER || '',
+    password: process.env.DB_PASSWORD || ''
+  },
+
+  WECHAT_CONFIG: {
+    appId: process.env.WECHAT_APP_ID || '',
+    appSecret: process.env.WECHAT_APP_SECRET || '',
+    tokenSecret: process.env.WECHAT_TOKEN_SECRET || 'fan-price-miniapp-token-secret',
+    tokenExpiresInHours: Number(process.env.WECHAT_TOKEN_EXPIRES_IN_HOURS || 72)
+  }
+};
