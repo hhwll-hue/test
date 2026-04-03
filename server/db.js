@@ -1,11 +1,11 @@
 const mysql = require('mysql2/promise');
-const { DB_CONFIG } = require('./config');
 
-const DB_HOST = DB_CONFIG.host;
-const DB_PORT = Number(DB_CONFIG.port || 3306);
-const DB_NAME = DB_CONFIG.database;
-const DB_USER = DB_CONFIG.user;
-const DB_PASSWORD = DB_CONFIG.password;
+const DB_HOST = process.env.DB_HOST || '';
+const DB_PORT = Number(process.env.DB_PORT || 3306);
+const DB_NAME = process.env.DB_NAME || '';
+const DB_USER = process.env.DB_USER || '';
+const DB_PASSWORD = process.env.DB_PASSWORD || '';
+
 let appUserColumnsPromise = null;
 
 if (!DB_HOST) throw new Error('DB_HOST is not set');
