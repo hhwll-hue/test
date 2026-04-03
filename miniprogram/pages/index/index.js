@@ -4,27 +4,71 @@ Page({
   data: {
     loading: true,
     error: '',
+    user: null,
     products: [],
     totalProducts: 0,
     savingProductId: null
   },
 
   onLoad() {
-    this.testHealth();
+    if (!this.ensureAuthenticated()) {
+      return;
+    }
+
     this.loadProducts();
   },
 
-  testHealth() {
-    wx.request({
-      url: `${API_BASE_URL}/api/health`,
-      method: 'GET',
-      success: (res) => {
-        console.log('health success:', res.data);
-      },
-      fail: (err) => {
-        console.error('health fail:', err);
-      }
+  onShow() {
+    const app = getApp();
+    const auth = app.getAuth();
+
+    if (!auth || !auth.token) {
+      this.redirectToLogin();
+      return;
+    }
+
+    this.setData({
+      user: auth.user || null
     });
+  },
+
+  ensureAuthenticated() {
+    const app = getApp();
+    const auth = app.getAuth();
+
+    if (!auth || !auth.token) {
+      this.redirectToLogin();
+      return false;
+    }
+
+    this.setData({
+      user: auth.user || null
+    });
+
+    return true;
+  },
+
+  redirectToLogin(message) {
+    const app = getApp();
+    app.clearAuth();
+
+    if (message) {
+      wx.showToast({
+        title: message,
+        icon: 'none'
+      });
+    }
+
+    wx.reLaunch({
+      url: '/pages/login/login'
+    });
+  },
+
+  getRequestHeader() {
+    const app = getApp();
+    return {
+      ...app.getAuthHeader()
+    };
   },
 
   loadProducts() {
@@ -36,8 +80,14 @@ Page({
     wx.request({
       url: `${API_BASE_URL}/api/products`,
       method: 'GET',
+      header: this.getRequestHeader(),
       success: (res) => {
         const { data } = res;
+
+        if (res.statusCode === 401 || res.statusCode === 403) {
+          this.redirectToLogin((data && data.message) || '登录已失效，请重新登录');
+          return;
+        }
 
         if (res.statusCode !== 200 || !data || !data.success) {
           this.setData({
@@ -111,13 +161,19 @@ Page({
       url: `${API_BASE_URL}/api/products/${product.id}/price`,
       method: 'POST',
       header: {
-        'content-type': 'application/json'
+        'content-type': 'application/json',
+        ...this.getRequestHeader()
       },
       data: {
         purchase_price: purchasePrice
       },
       success: (res) => {
         const { data } = res;
+
+        if (res.statusCode === 401 || res.statusCode === 403) {
+          this.redirectToLogin((data && data.message) || '登录已失效，请重新登录');
+          return;
+        }
 
         if (res.statusCode !== 200 || !data || !data.success || !data.data) {
           wx.showToast({
@@ -150,6 +206,14 @@ Page({
           savingProductId: null
         });
       }
+    });
+  },
+
+  logout() {
+    const app = getApp();
+    app.clearAuth();
+    wx.reLaunch({
+      url: '/pages/login/login'
     });
   }
 });

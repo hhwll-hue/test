@@ -1,0 +1,34 @@
+<view class="page">
+  <view class="hero-card">
+    <view class="hero-kicker">WECHAT AUTH</view>
+    <view class="hero-title">工业风机价格录入</view>
+    <view class="hero-desc">先完成微信登录，再进入产品价格登记页面。</view>
+  </view>
+
+  <view class="login-card">
+    <view class="section-title">登录信息</view>
+
+    <view class="field-label">登录姓名</view>
+    <input
+      class="text-input"
+      placeholder="请输入 app_user.user_name"
+      value="{{userName}}"
+      bindinput="onUserNameInput"
+    />
+
+    <view class="tips">
+      登录时会自动调用微信 `wx.login`，后端通过 `code2Session` 获取 `wechat_openid`。
+    </view>
+
+    <view wx:if="{{error}}" class="error-text">{{error}}</view>
+
+    <button
+      class="login-button"
+      loading="{{loggingIn}}"
+      disabled="{{loggingIn}}"
+      bindtap="submitLogin"
+    >
+      微信登录
+    </button>
+  </view>
+</view>

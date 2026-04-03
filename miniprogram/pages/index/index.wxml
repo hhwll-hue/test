@@ -1,6 +1,14 @@
 <view class="page">
   <view class="header">
-    <view class="title">工业风机价格录入</view>
+    <view class="header-top">
+      <view>
+        <view class="title">工业风机价格录入</view>
+        <view class="summary" wx:if="{{user}}">
+          {{user.user_name}} · {{user.role_label || '可登记价格'}}
+        </view>
+      </view>
+      <button class="logout-button" size="mini" bindtap="logout">退出</button>
+    </view>
     <view class="summary" wx:if="{{!loading && !error}}">
       当前共 {{totalProducts}} 个产品
     </view>

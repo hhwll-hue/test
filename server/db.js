@@ -6,6 +6,7 @@ const DB_PORT = Number(DB_CONFIG.port || 3306);
 const DB_NAME = DB_CONFIG.database;
 const DB_USER = DB_CONFIG.user;
 const DB_PASSWORD = DB_CONFIG.password;
+let appUserColumnsPromise = null;
 
 if (!DB_HOST) throw new Error('DB_HOST is not set');
 if (!DB_NAME) throw new Error('DB_NAME is not set');
@@ -49,6 +50,93 @@ function normalizePrice(value) {
   }
 
   return String(value);
+}
+
+async function getAppUserColumns() {
+  if (!appUserColumnsPromise) {
+    appUserColumnsPromise = pool
+      .query('SHOW COLUMNS FROM app_user')
+      .then(([rows]) => new Set(rows.map((row) => row.Field)))
+      .catch((error) => {
+        appUserColumnsPromise = null;
+        throw error;
+      });
+  }
+
+  return appUserColumnsPromise;
+}
+
+function mapAppUserRow(row) {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: Number(row.id),
+    user_name: normalizeText(row.user_name),
+    role: Number(row.role),
+    status: Number(row.status),
+    phone: normalizeText(row.phone),
+    wechat_openid: normalizeText(row.wechat_openid)
+  };
+}
+
+async function getAppUserByField(field, value) {
+  const columns = await getAppUserColumns();
+  const selectFields = ['id', 'user_name', 'role', 'status', 'phone'];
+
+  if (columns.has('wechat_openid')) {
+    selectFields.push('wechat_openid');
+  }
+
+  const [rows] = await pool.execute(
+    `SELECT ${selectFields.join(', ')} FROM app_user WHERE ${field} = ? LIMIT 1`,
+    [value]
+  );
+
+  if (!rows.length) {
+    return null;
+  }
+
+  return mapAppUserRow(rows[0]);
+}
+
+async function getAppUserByUserName(userName) {
+  return getAppUserByField('user_name', userName);
+}
+
+async function getAppUserById(userId) {
+  return getAppUserByField('id', userId);
+}
+
+async function getAppUserByWechatOpenId(wechatOpenId) {
+  const columns = await getAppUserColumns();
+
+  if (!columns.has('wechat_openid')) {
+    return null;
+  }
+
+  return getAppUserByField('wechat_openid', wechatOpenId);
+}
+
+async function bindWechatOpenId(userId, wechatOpenId) {
+  const columns = await getAppUserColumns();
+
+  if (!columns.has('wechat_openid')) {
+    return false;
+  }
+
+  const [result] = await pool.execute(
+    `
+      UPDATE app_user
+      SET wechat_openid = ?
+      WHERE id = ?
+        AND (wechat_openid IS NULL OR wechat_openid = '')
+    `,
+    [wechatOpenId, userId]
+  );
+
+  return result.affectedRows > 0;
 }
 
 function mapProductRow(row) {
@@ -156,5 +244,9 @@ async function saveProductPrice(productId, purchasePrice) {
 
 module.exports = {
   getProductsWithLatestPrice,
-  saveProductPrice
+  saveProductPrice,
+  getAppUserByUserName,
+  getAppUserById,
+  getAppUserByWechatOpenId,
+  bindWechatOpenId
 };
