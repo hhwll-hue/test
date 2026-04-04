@@ -413,3 +413,50 @@ app.post('/api/products/:id/price', requireAuth, async (req, res) => {
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server started on port ${port}`);
 });
+const dns = require('dns').promises;
+
+app.get('/api/debug/wechat-tls', async (req, res) => {
+  const result = {
+    env: {
+      HTTPS_PROXY: process.env.HTTPS_PROXY || '',
+      HTTP_PROXY: process.env.HTTP_PROXY || '',
+      NODE_EXTRA_CA_CERTS: process.env.NODE_EXTRA_CA_CERTS || '',
+      NODE_TLS_REJECT_UNAUTHORIZED: process.env.NODE_TLS_REJECT_UNAUTHORIZED || ''
+    },
+    dns: null,
+    https: null
+  };
+
+  try {
+    result.dns = await dns.lookup('api.weixin.qq.com', { all: true });
+  } catch (e) {
+    result.dns = { error: e.message, code: e.code };
+  }
+
+  await new Promise((resolve) => {
+    const req = https.get('https://api.weixin.qq.com', (response) => {
+      result.https = {
+        ok: true,
+        statusCode: response.statusCode,
+        headers: response.headers
+      };
+      response.resume();
+      resolve();
+    });
+
+    req.on('error', (err) => {
+      result.https = {
+        ok: false,
+        message: err.message,
+        code: err.code
+      };
+      resolve();
+    });
+
+    req.setTimeout(8000, () => {
+      req.destroy(new Error('debug request timeout'));
+    });
+  });
+
+  res.json(result);
+});
