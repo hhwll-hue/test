@@ -13,7 +13,8 @@ const WECHAT_CONFIG = {
   appId: process.env.WECHAT_APP_ID || '',
   appSecret: process.env.WECHAT_APP_SECRET || '',
   tokenSecret: process.env.WECHAT_TOKEN_SECRET || 'fan-price-miniapp-token-secret',
-  tokenExpiresInHours: Number(process.env.WECHAT_TOKEN_EXPIRES_IN_HOURS || 72)
+  tokenExpiresInHours: Number(process.env.WECHAT_TOKEN_EXPIRES_IN_HOURS || 72),
+  tlsRejectUnauthorized: process.env.WECHAT_TLS_REJECT_UNAUTHORIZED !== '0'
 };
 
 const {
@@ -123,7 +124,8 @@ function httpsRequestJson(method, requestUrl, body) {
     method,
     hostname: targetUrl.hostname,
     path: `${targetUrl.pathname}${targetUrl.search}`,
-    headers: {}
+    headers: {},
+    rejectUnauthorized: WECHAT_CONFIG.tlsRejectUnauthorized
   };
 
   if (payload) {
@@ -357,9 +359,12 @@ async function handleWechatPhoneLogin(req, res) {
     });
   } catch (error) {
     console.error('WeChat phone login failed:', error);
+    const message = error.message === 'self-signed certificate'
+      ? '微信手机号登录失败：当前服务访问微信接口时遇到自签名证书，请检查代理证书，或设置 WECHAT_TLS_REJECT_UNAUTHORIZED=0 作为临时绕过'
+      : '微信手机号登录失败，请检查小程序 appId/appSecret 和手机号授权配置';
     res.status(500).json({
       success: false,
-      message: '微信手机号登录失败，请检查小程序 appId/appSecret 和手机号授权配置',
+      message,
       error: error.message
     });
   }
@@ -458,7 +463,9 @@ app.get('/api/debug/wechat-tls', async (req, res) => {
       HTTPS_PROXY: process.env.HTTPS_PROXY || '',
       HTTP_PROXY: process.env.HTTP_PROXY || '',
       NODE_EXTRA_CA_CERTS: process.env.NODE_EXTRA_CA_CERTS || '',
-      NODE_TLS_REJECT_UNAUTHORIZED: process.env.NODE_TLS_REJECT_UNAUTHORIZED || ''
+      NODE_TLS_REJECT_UNAUTHORIZED: process.env.NODE_TLS_REJECT_UNAUTHORIZED || '',
+      WECHAT_TLS_REJECT_UNAUTHORIZED: process.env.WECHAT_TLS_REJECT_UNAUTHORIZED || '',
+      effectiveWechatTlsRejectUnauthorized: String(WECHAT_CONFIG.tlsRejectUnauthorized)
     },
     dns: null,
     https: null
@@ -471,7 +478,10 @@ app.get('/api/debug/wechat-tls', async (req, res) => {
   }
 
   await new Promise((resolve) => {
-    const req = https.get('https://api.weixin.qq.com', (response) => {
+    const req = https.get(
+      'https://api.weixin.qq.com',
+      { rejectUnauthorized: WECHAT_CONFIG.tlsRejectUnauthorized },
+      (response) => {
       result.https = {
         ok: true,
         statusCode: response.statusCode,
@@ -479,7 +489,8 @@ app.get('/api/debug/wechat-tls', async (req, res) => {
       };
       response.resume();
       resolve();
-    });
+      }
+    );
 
     req.on('error', (err) => {
       result.https = {

@@ -67,6 +67,9 @@
   - `WECHAT_APP_SECRET`
   - `WECHAT_TOKEN_SECRET`
   - `WECHAT_TOKEN_EXPIRES_IN_HOURS`
+  - `WECHAT_TLS_REJECT_UNAUTHORIZED`
+    - 默认不填或为 `1`，严格校验证书
+    - 如果运行环境代理了微信 HTTPS 并注入自签名证书，可临时设为 `0`
 - 数据库 `app_user` 表
   - 需要提前把每个可登录用户的手机号维护到 `phone` 字段
   - 建议统一存纯手机号，例如 `13800138000`
@@ -86,6 +89,7 @@ WECHAT_APP_ID=wx1234567890abcdef
 WECHAT_APP_SECRET=your_wechat_secret
 WECHAT_TOKEN_SECRET=replace_with_a_long_random_string
 WECHAT_TOKEN_EXPIRES_IN_HOURS=72
+WECHAT_TLS_REJECT_UNAUTHORIZED=1
 ```
 
 ## 数据库建议
@@ -108,3 +112,5 @@ WECHAT_TOKEN_EXPIRES_IN_HOURS=72
 
 - 当前后端读取的是环境变量，不读取 `server/config.js`
 - 如果你本地有 `server/config.js`，那只是你自己的本地文件，除非你额外改启动方式，否则不会生效
+- 如果微信手机号登录报错 `self-signed certificate`，说明服务端访问 `api.weixin.qq.com` 时经过了带自签名证书的代理
+- 更稳妥的修复是把代理根证书加入信任链；`WECHAT_TLS_REJECT_UNAUTHORIZED=0` 只建议作为临时排障手段

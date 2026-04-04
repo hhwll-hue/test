@@ -16,7 +16,8 @@ const WECHAT_CONFIG = {
   appId: process.env.WECHAT_APP_ID || '',
   appSecret: process.env.WECHAT_APP_SECRET || '',
   tokenSecret: process.env.WECHAT_TOKEN_SECRET || '',
-  tokenExpiresInHours: readNumberEnv('WECHAT_TOKEN_EXPIRES_IN_HOURS', 72)
+  tokenExpiresInHours: readNumberEnv('WECHAT_TOKEN_EXPIRES_IN_HOURS', 72),
+  tlsRejectUnauthorized: process.env.WECHAT_TLS_REJECT_UNAUTHORIZED !== '0'
 };
 
 const DB_CONFIG = {

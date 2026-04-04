@@ -22,11 +22,27 @@ Page({
       return;
     }
 
-    const phoneCode = String((event.detail && event.detail.code) || '').trim();
+    const detail = event.detail || {};
+    const phoneCode = String(detail.code || '').trim();
+    const errMsg = String(detail.errMsg || '').trim();
+    const errno = detail.errno;
+
+    console.log('getPhoneNumber detail:', detail);
 
     if (!phoneCode) {
+      let errorMessage = '未获取到微信手机号授权，请允许手机号登录后重试';
+
+      if (errMsg.includes('user deny') || errMsg.includes('user cancel')) {
+        errorMessage = '你已取消手机号授权，请重新点击并允许微信手机号登录';
+      } else if (Number(errno) === 102 || errMsg.includes('jsapi has no permission')) {
+        errorMessage =
+          '当前小程序 AppID 没有微信手机号接口权限，请在小程序后台确认主体类型、认证状态和手机号能力是否已开通';
+      } else if (errMsg) {
+        errorMessage = `微信手机号授权失败：${errMsg}${errno !== undefined ? ` (${errno})` : ''}`;
+      }
+
       this.setData({
-        error: '未获取到微信手机号授权，请允许手机号登录后重试'
+        error: errorMessage
       });
       return;
     }
@@ -47,10 +63,23 @@ Page({
       },
       success: (res) => {
         const { data } = res;
+        console.log('wechat-phone-login response:', res);
+        console.log(
+          'wechat-phone-login payload:',
+          JSON.stringify(
+            {
+              statusCode: res.statusCode,
+              data
+            },
+            null,
+            2
+          )
+        );
 
         if (res.statusCode !== 200 || !data || !data.success || !data.data) {
+          const backendError = data && data.error ? `：${data.error}` : '';
           this.setData({
-            error: (data && data.message) || '登录失败，请检查手机号是否已登记'
+            error: ((data && data.message) || '登录失败，请检查手机号是否已登记') + backendError
           });
           return;
         }
