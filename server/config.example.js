@@ -9,7 +9,7 @@ function readNumberEnv(name, fallback) {
 }
 
 const SERVER_CONFIG = {
-  port: readNumberEnv('SERVER_PORT', 3000)
+  port: readNumberEnv('PORT', readNumberEnv('SERVER_PORT', 3000))
 };
 
 const WECHAT_CONFIG = {

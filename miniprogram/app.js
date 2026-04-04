@@ -8,12 +8,6 @@ App({
   onLaunch() {
     const auth = wx.getStorageSync(AUTH_STORAGE_KEY) || null;
     this.globalData.auth = auth;
-
-    if (wx.cloud && typeof wx.cloud.init === 'function') {
-      wx.cloud.init({
-        env: 'https://fan-240142-10-1417324185.sh.run.tcloudbase.com'
-      });
-    }
   },
 
   getAuth() {

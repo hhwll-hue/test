@@ -2,8 +2,10 @@ const express = require('express');
 const cors = require('cors');
 const crypto = require('crypto');
 const https = require('https');
+const dns = require('dns').promises;
+
 const SERVER_CONFIG = {
-  port: Number(process.env.PORT || 3000),
+  port: Number(process.env.PORT || process.env.SERVER_PORT || 3000),
   nodeEnv: process.env.NODE_ENV || 'development'
 };
 
@@ -13,13 +15,12 @@ const WECHAT_CONFIG = {
   tokenSecret: process.env.WECHAT_TOKEN_SECRET || 'fan-price-miniapp-token-secret',
   tokenExpiresInHours: Number(process.env.WECHAT_TOKEN_EXPIRES_IN_HOURS || 72)
 };
+
 const {
   getProductsWithLatestPrice,
   saveProductPrice,
-  getAppUserByUserName,
   getAppUserById,
-  getAppUserByWechatOpenId,
-  bindWechatOpenId
+  getAppUserByPhone
 } = require('./db');
 
 const app = express();
@@ -27,6 +28,10 @@ const port = SERVER_CONFIG.port || 3000;
 const allowedRoles = new Set([1, 2]);
 const tokenSecret = String(WECHAT_CONFIG.tokenSecret || 'fan-price-miniapp-token-secret');
 const tokenExpiresInHours = Number(WECHAT_CONFIG.tokenExpiresInHours || 72);
+const wechatAccessTokenCache = {
+  value: '',
+  expiresAt: 0
+};
 
 app.use(cors());
 app.use(express.json());
@@ -107,51 +112,122 @@ function sanitizeUser(user) {
     role_label: getRoleLabel(user.role),
     status: user.status,
     phone: user.phone,
-    wechat_openid: user.wechat_openid || '',
     can_record_price: allowedRoles.has(Number(user.role)) && Number(user.status) === 1
   };
 }
 
-function fetchWechatSession(code) {
+function httpsRequestJson(method, requestUrl, body) {
+  const targetUrl = new URL(requestUrl);
+  const payload = body ? JSON.stringify(body) : '';
+  const requestOptions = {
+    method,
+    hostname: targetUrl.hostname,
+    path: `${targetUrl.pathname}${targetUrl.search}`,
+    headers: {}
+  };
+
+  if (payload) {
+    requestOptions.headers['Content-Type'] = 'application/json';
+    requestOptions.headers['Content-Length'] = Buffer.byteLength(payload);
+  }
+
+  return new Promise((resolve, reject) => {
+    const req = https.request(requestOptions, (response) => {
+      let rawData = '';
+
+      response.on('data', (chunk) => {
+        rawData += chunk;
+      });
+
+      response.on('end', () => {
+        try {
+          const parsed = rawData ? JSON.parse(rawData) : {};
+
+          if (parsed.errcode) {
+            reject(new Error(parsed.errmsg || `WeChat API error: ${parsed.errcode}`));
+            return;
+          }
+
+          resolve(parsed);
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
+
+    req.on('error', reject);
+
+    if (payload) {
+      req.write(payload);
+    }
+
+    req.end();
+  });
+}
+
+async function getWechatAccessToken() {
   const appId = String(WECHAT_CONFIG.appId || '').trim();
   const appSecret = String(WECHAT_CONFIG.appSecret || '').trim();
 
   if (!appId || !appSecret) {
-    return Promise.reject(new Error('WECHAT_CONFIG.appId or appSecret is not configured'));
+    throw new Error('WECHAT_APP_ID or WECHAT_APP_SECRET is not configured');
   }
 
-  const requestUrl = `https://api.weixin.qq.com/sns/jscode2session?appid=${encodeURIComponent(
+  if (wechatAccessTokenCache.value && Date.now() < wechatAccessTokenCache.expiresAt) {
+    return wechatAccessTokenCache.value;
+  }
+
+  const requestUrl = `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${encodeURIComponent(
     appId
-  )}&secret=${encodeURIComponent(appSecret)}&js_code=${encodeURIComponent(
-    code
-  )}&grant_type=authorization_code`;
+  )}&secret=${encodeURIComponent(appSecret)}`;
+  const result = await httpsRequestJson('GET', requestUrl);
+  const accessToken = String(result.access_token || '').trim();
+  const expiresIn = Number(result.expires_in || 7200);
 
-  return new Promise((resolve, reject) => {
-    https
-      .get(requestUrl, (response) => {
-        let rawData = '';
+  if (!accessToken) {
+    throw new Error('Failed to get WeChat access token');
+  }
 
-        response.on('data', (chunk) => {
-          rawData += chunk;
-        });
+  wechatAccessTokenCache.value = accessToken;
+  wechatAccessTokenCache.expiresAt = Date.now() + Math.max(expiresIn - 300, 60) * 1000;
 
-        response.on('end', () => {
-          try {
-            const parsed = JSON.parse(rawData);
+  return accessToken;
+}
 
-            if (parsed.errcode) {
-              reject(new Error(parsed.errmsg || `WeChat API error: ${parsed.errcode}`));
-              return;
-            }
+function buildPhoneCandidates(phoneInfo) {
+  const candidates = [];
+  const phoneNumber = String((phoneInfo && phoneInfo.phoneNumber) || '').trim();
+  const purePhoneNumber = String((phoneInfo && phoneInfo.purePhoneNumber) || '').trim();
+  const countryCode = String((phoneInfo && phoneInfo.countryCode) || '').trim();
 
-            resolve(parsed);
-          } catch (error) {
-            reject(error);
-          }
-        });
-      })
-      .on('error', reject);
-  });
+  if (phoneNumber) {
+    candidates.push(phoneNumber);
+  }
+
+  if (purePhoneNumber) {
+    candidates.push(purePhoneNumber);
+  }
+
+  if (countryCode && purePhoneNumber) {
+    candidates.push(`+${countryCode}${purePhoneNumber}`);
+    candidates.push(`${countryCode}${purePhoneNumber}`);
+  }
+
+  return [...new Set(candidates.map((item) => item.replace(/[\s-]/g, '')).filter(Boolean))];
+}
+
+async function fetchWechatPhoneNumber(phoneCode) {
+  const accessToken = await getWechatAccessToken();
+  const requestUrl = `https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token=${encodeURIComponent(
+    accessToken
+  )}`;
+  const result = await httpsRequestJson('POST', requestUrl, { code: phoneCode });
+
+  if (!result.phone_info) {
+    throw new Error('Failed to get phone_info from WeChat');
+  }
+
+  return result.phone_info;
 }
 
 async function requireAuth(req, res, next) {
@@ -195,14 +271,6 @@ async function requireAuth(req, res, next) {
       return;
     }
 
-    if (user.wechat_openid && payload.openid && user.wechat_openid !== payload.openid) {
-      res.status(401).json({
-        success: false,
-        message: '微信登录标识不匹配，请重新登录'
-      });
-      return;
-    }
-
     req.auth = {
       tokenPayload: payload,
       user
@@ -225,44 +293,33 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-app.post('/api/auth/wechat-login', async (req, res) => {
-  const code = String((req.body && req.body.code) || '').trim();
-  const userName = String((req.body && req.body.user_name) || '').trim();
+async function handleWechatPhoneLogin(req, res) {
+  const phoneCode = String((req.body && req.body.phone_code) || '').trim();
 
-  if (!userName) {
+  if (!phoneCode) {
     res.status(400).json({
       success: false,
-      message: 'user_name is required'
-    });
-    return;
-  }
-
-  if (!code) {
-    res.status(400).json({
-      success: false,
-      message: 'wx.login code is required'
+      message: 'phone_code is required'
     });
     return;
   }
 
   try {
-    const wechatSession = await fetchWechatSession(code);
-    const wechatOpenId = String(wechatSession.openid || '').trim();
+    const phoneInfo = await fetchWechatPhoneNumber(phoneCode);
+    const phoneCandidates = buildPhoneCandidates(phoneInfo);
+    let user = null;
 
-    if (!wechatOpenId) {
-      res.status(500).json({
-        success: false,
-        message: 'Failed to get wechat_openid from WeChat'
-      });
-      return;
+    for (const phone of phoneCandidates) {
+      user = await getAppUserByPhone(phone);
+      if (user) {
+        break;
+      }
     }
 
-    const user = await getAppUserByUserName(userName);
-
     if (!user) {
-      res.status(404).json({
+      res.status(403).json({
         success: false,
-        message: '登录姓名不存在，请先在 app_user 中登记'
+        message: '该微信手机号未登记，请先在 app_user.phone 中维护后再登录'
       });
       return;
     }
@@ -283,31 +340,10 @@ app.post('/api/auth/wechat-login', async (req, res) => {
       return;
     }
 
-    if (user.wechat_openid && user.wechat_openid !== wechatOpenId) {
-      res.status(403).json({
-        success: false,
-        message: '当前账号已绑定其他微信账号，请联系管理员处理'
-      });
-      return;
-    }
-
-    const boundUser = await getAppUserByWechatOpenId(wechatOpenId);
-
-    if (boundUser && Number(boundUser.id) !== Number(user.id)) {
-      res.status(403).json({
-        success: false,
-        message: '该微信号已绑定其他登录账号'
-      });
-      return;
-    }
-
-    const wechatOpenIdSaved = !user.wechat_openid
-      ? await bindWechatOpenId(user.id, wechatOpenId)
-      : false;
     const latestUser = await getAppUserById(user.id);
     const token = createToken({
       uid: user.id,
-      openid: wechatOpenId,
+      phone: user.phone,
       exp: Date.now() + tokenExpiresInHours * 60 * 60 * 1000
     });
 
@@ -315,20 +351,22 @@ app.post('/api/auth/wechat-login', async (req, res) => {
       success: true,
       data: {
         token,
-        wechat_openid: wechatOpenId,
-        wechat_openid_saved: wechatOpenIdSaved,
+        phone: user.phone,
         user: sanitizeUser(latestUser || user)
       }
     });
   } catch (error) {
-    console.error('WeChat login failed:', error);
+    console.error('WeChat phone login failed:', error);
     res.status(500).json({
       success: false,
-      message: '微信登录失败，请检查小程序 appId/appSecret 和 code 是否有效',
+      message: '微信手机号登录失败，请检查小程序 appId/appSecret 和手机号授权配置',
       error: error.message
     });
   }
-});
+}
+
+app.post('/api/auth/wechat-phone-login', handleWechatPhoneLogin);
+app.post('/api/auth/wechat-login', handleWechatPhoneLogin);
 
 app.get('/api/auth/me', requireAuth, async (req, res) => {
   res.json({
@@ -413,7 +451,6 @@ app.post('/api/products/:id/price', requireAuth, async (req, res) => {
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server started on port ${port}`);
 });
-const dns = require('dns').promises;
 
 app.get('/api/debug/wechat-tls', async (req, res) => {
   const result = {

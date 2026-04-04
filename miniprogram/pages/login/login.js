@@ -2,7 +2,6 @@ const { API_BASE_URL } = require('../../utils/config');
 
 Page({
   data: {
-    userName: '',
     loggingIn: false,
     error: ''
   },
@@ -18,19 +17,16 @@ Page({
     }
   },
 
-  onUserNameInput(event) {
-    this.setData({
-      userName: event.detail.value,
-      error: ''
-    });
-  },
+  onGetPhoneNumber(event) {
+    if (this.data.loggingIn) {
+      return;
+    }
 
-  submitLogin() {
-    const userName = String(this.data.userName || '').trim();
+    const phoneCode = String((event.detail && event.detail.code) || '').trim();
 
-    if (!userName) {
+    if (!phoneCode) {
       this.setData({
-        error: '请输入登录姓名'
+        error: '未获取到微信手机号授权，请允许手机号登录后重试'
       });
       return;
     }
@@ -40,69 +36,50 @@ Page({
       error: ''
     });
 
-    wx.login({
-      success: ({ code }) => {
-        if (!code) {
+    wx.request({
+      url: `${API_BASE_URL}/api/auth/wechat-phone-login`,
+      method: 'POST',
+      header: {
+        'content-type': 'application/json'
+      },
+      data: {
+        phone_code: phoneCode
+      },
+      success: (res) => {
+        const { data } = res;
+
+        if (res.statusCode !== 200 || !data || !data.success || !data.data) {
           this.setData({
-            loggingIn: false,
-            error: '微信登录失败，请稍后重试'
+            error: (data && data.message) || '登录失败，请检查手机号是否已登记'
           });
           return;
         }
 
-        wx.request({
-          url: `${API_BASE_URL}/api/auth/wechat-login`,
-          method: 'POST',
-          header: {
-            'content-type': 'application/json'
-          },
-          data: {
-            code,
-            user_name: userName
-          },
-          success: (res) => {
-            const { data } = res;
+        const app = getApp();
 
-            if (res.statusCode !== 200 || !data || !data.success || !data.data) {
-              this.setData({
-                error: (data && data.message) || '登录失败，请检查账号状态'
-              });
-              return;
-            }
+        app.setAuth({
+          token: data.data.token,
+          user: data.data.user,
+          phone: data.data.phone || ''
+        });
 
-            const app = getApp();
+        wx.showToast({
+          title: '登录成功',
+          icon: 'success'
+        });
 
-            app.setAuth({
-              token: data.data.token,
-              user: data.data.user,
-              wechat_openid: data.data.wechat_openid || ''
-            });
-
-            wx.showToast({
-              title: '登录成功',
-              icon: 'success'
-            });
-
-            wx.reLaunch({
-              url: '/pages/index/index'
-            });
-          },
-          fail: () => {
-            this.setData({
-              error: '无法连接登录接口，请检查后端服务'
-            });
-          },
-          complete: () => {
-            this.setData({
-              loggingIn: false
-            });
-          }
+        wx.reLaunch({
+          url: '/pages/index/index'
         });
       },
       fail: () => {
         this.setData({
-          loggingIn: false,
-          error: '微信登录失败，请确认开发者工具已开启小程序能力'
+          error: '无法连接登录接口，请检查后端服务'
+        });
+      },
+      complete: () => {
+        this.setData({
+          loggingIn: false
         });
       }
     });

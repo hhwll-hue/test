@@ -6,8 +6,6 @@ const DB_NAME = process.env.DB_NAME || '';
 const DB_USER = process.env.DB_USER || '';
 const DB_PASSWORD = process.env.DB_PASSWORD || '';
 
-let appUserColumnsPromise = null;
-
 if (!DB_HOST) throw new Error('DB_HOST is not set');
 if (!DB_NAME) throw new Error('DB_NAME is not set');
 if (!DB_USER) throw new Error('DB_USER is not set');
@@ -52,20 +50,6 @@ function normalizePrice(value) {
   return String(value);
 }
 
-async function getAppUserColumns() {
-  if (!appUserColumnsPromise) {
-    appUserColumnsPromise = pool
-      .query('SHOW COLUMNS FROM app_user')
-      .then(([rows]) => new Set(rows.map((row) => row.Field)))
-      .catch((error) => {
-        appUserColumnsPromise = null;
-        throw error;
-      });
-  }
-
-  return appUserColumnsPromise;
-}
-
 function mapAppUserRow(row) {
   if (!row) {
     return null;
@@ -76,18 +60,16 @@ function mapAppUserRow(row) {
     user_name: normalizeText(row.user_name),
     role: Number(row.role),
     status: Number(row.status),
-    phone: normalizeText(row.phone),
-    wechat_openid: normalizeText(row.wechat_openid)
+    phone: normalizeText(row.phone)
   };
 }
 
-async function getAppUserByField(field, value) {
-  const columns = await getAppUserColumns();
-  const selectFields = ['id', 'user_name', 'role', 'status', 'phone'];
+function normalizePhoneValue(phone) {
+  return normalizeText(phone).replace(/[\s-]/g, '');
+}
 
-  if (columns.has('wechat_openid')) {
-    selectFields.push('wechat_openid');
-  }
+async function getAppUserByField(field, value) {
+  const selectFields = ['id', 'user_name', 'role', 'status', 'phone'];
 
   const [rows] = await pool.execute(
     `SELECT ${selectFields.join(', ')} FROM app_user WHERE ${field} = ? LIMIT 1`,
@@ -101,44 +83,35 @@ async function getAppUserByField(field, value) {
   return mapAppUserRow(rows[0]);
 }
 
-async function getAppUserByUserName(userName) {
-  return getAppUserByField('user_name', userName);
-}
-
 async function getAppUserById(userId) {
   return getAppUserByField('id', userId);
 }
 
-async function getAppUserByWechatOpenId(wechatOpenId) {
-  const columns = await getAppUserColumns();
+async function getAppUserByPhone(phone) {
+  const normalizedPhone = normalizePhoneValue(phone);
 
-  if (!columns.has('wechat_openid')) {
+  if (!normalizedPhone) {
     return null;
   }
 
-  return getAppUserByField('wechat_openid', wechatOpenId);
-}
+  const selectFields = ['id', 'user_name', 'role', 'status', 'phone'];
 
-async function bindWechatOpenId(userId, wechatOpenId) {
-  const columns = await getAppUserColumns();
-
-  if (!columns.has('wechat_openid')) {
-    return false;
-  }
-
-  const [result] = await pool.execute(
+  const [rows] = await pool.execute(
     `
-      UPDATE app_user
-      SET wechat_openid = ?
-      WHERE id = ?
-        AND (wechat_openid IS NULL OR wechat_openid = '')
+      SELECT ${selectFields.join(', ')}
+      FROM app_user
+      WHERE REPLACE(REPLACE(IFNULL(phone, ''), ' ', ''), '-', '') = ?
+      LIMIT 1
     `,
-    [wechatOpenId, userId]
+    [normalizedPhone]
   );
 
-  return result.affectedRows > 0;
-}
+  if (!rows.length) {
+    return null;
+  }
 
+  return mapAppUserRow(rows[0]);
+}
 function mapProductRow(row) {
   return {
     id: row.id,
@@ -245,8 +218,6 @@ async function saveProductPrice(productId, purchasePrice) {
 module.exports = {
   getProductsWithLatestPrice,
   saveProductPrice,
-  getAppUserByUserName,
   getAppUserById,
-  getAppUserByWechatOpenId,
-  bindWechatOpenId
+  getAppUserByPhone
 };
